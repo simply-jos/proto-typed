@@ -21,6 +21,9 @@ export class MessageRepository {
         name: packetName
       };
 
+      if (this.messageTypes[packetName])
+        throw `Packet ${packetName} was already registered`
+
       this.messageTypes[packetName] = target;
     };
   }
