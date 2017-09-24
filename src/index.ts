@@ -1,0 +1,1 @@
+export { MessageRepository, Message } from './Protocol'

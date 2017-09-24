@@ -1,0 +1,21 @@
+{
+  "name": "proto-typed",
+  "description": "Strongly typed, Typescript-driven newtworked protocols",
+  "version": "0.1.0",
+  "author": "Joseph Delgado",
+  "url": "http://rly.sexy/",
+
+  "scripts": {
+    "build": "tsc"
+  },
+
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+
+  "devDependencies": {
+    "typescript": "latest"
+  },
+
+  "dependencies": {
+  }
+}
