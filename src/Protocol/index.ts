@@ -28,7 +28,7 @@ export class MessageRepository {
     };
   }
 
-  DispatchToHandler(serializedMessage: string, handlers: { [key: string]: (message: Message) => Message | undefined}) {
+  DispatchToHandler(serializedMessage: string, handlers: { [key: string]: (message: Message) => Message | undefined | void}) {
     // Deserialize packet
     try {
       var deserialized: SerializedMessage = JSON.parse(serializedMessage);
