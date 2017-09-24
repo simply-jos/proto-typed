@@ -10,21 +10,21 @@ export interface SerializedMessage {
  * Message repository used to parse messages and dispatch events
  */
 export class MessageRepository {
-  private messageTypes: { [key: string]: typeof Message } = {};
-  private packetDecorator: <T extends typeof Message>(target: T) => void;
+  private messages: { [key: string]: typeof Message } = {};
+  private messageDecorator: <T extends typeof Message>(target: T) => void;
 
   constructor() {
-    this.packetDecorator = <T extends typeof Message>(target: T, name?: string) => {
-      const packetName = name || target.name;
+    this.messageDecorator = <T extends typeof Message>(target: T, name?: string) => {
+      const messageName = name || target.name;
 
       target.__metadata = {
-        name: packetName
+        name: messageName
       };
 
-      if (this.messageTypes[packetName])
-        throw `Packet ${packetName} was already registered`
+      if (this.messages[messageName])
+        throw `Message type ${messageName} was already registered`
 
-      this.messageTypes[packetName] = target;
+      this.messages[messageName] = target;
     };
   }
 
@@ -43,7 +43,7 @@ export class MessageRepository {
 
     // Convert the packet into its proper type
     try {
-      var messageType = this.messageTypes[deserialized.name];
+      var messageType = this.messages[deserialized.name];
       var message = messageType.Unmarshal(deserialized);
     }
 
@@ -58,8 +58,8 @@ export class MessageRepository {
     return response;
   }
 
-  GetPacketDecorator() {
-    return this.packetDecorator;
+  GetMessageDecorator() {
+    return this.messageDecorator;
   }
 }
 
