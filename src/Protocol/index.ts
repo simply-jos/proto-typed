@@ -68,6 +68,14 @@ export class Message {
     name: string
   };
 
+  static Create<
+    T extends typeof Message
+  >(this: T, fields: T['prototype']) {
+    const packedObject: T['prototype'] = new this();
+
+    return Object.assign(packedObject, fields);
+  }
+
   static Serialize<
     T extends typeof Message
   >(this: T, value: T['prototype']): string {
