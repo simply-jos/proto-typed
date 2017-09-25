@@ -76,6 +76,10 @@ export class Message {
     return Object.assign(packedObject, fields);
   }
 
+  Serialize<T extends Message>(this: T): string {
+    return (this as any).__proto__.Serialize(this);
+  }
+
   static Serialize<
     T extends typeof Message
   >(this: T, value: T['prototype']): string {
@@ -90,6 +94,10 @@ export class Message {
     let deserialized = JSON.parse(value);
 
     return this.Unmarshal(deserialized);
+  }
+
+  Marshal<T extends Message>(this: T): SerializedMessage {
+    return (this as any).__proto__.Marshal(this);
   }
 
   static Marshal<
