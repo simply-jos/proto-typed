@@ -1,1 +1,1 @@
-export { MessageRepository, Message } from './Protocol'
+export { MessageRepository, MessageDeclaration, Message, Handler } from './Protocol'
