@@ -1,5 +1,7 @@
 /**
- * Decorator to indicate unenumerable field
+ * Decorator to indicate unenumerable field.
+ * 
+ * Used to prevent marshalling of internal data fields.
  */
 function unenumerable() {
   return function (target: any, propertyKey: string | symbol) {
@@ -20,13 +22,16 @@ export interface MarshalledMessage {
   payload: {};
 }
 
+/**
+ * Handler for a message, must return the message's response type
+ */
 export class Handler<T extends typeof MessageDeclaration> {
   public readonly type: T;
-  public readonly handler: (message: T['prototype']) => Promise<Message<T['Response']>>;
+  public readonly handler: (message: Message<T>) => Promise<Message<T['Response']>>;
 
   constructor(fields: {
     type: T,
-    handler: (message: T['prototype']) => Promise<Message<T['Response']>>
+    handler: (message: Message<T>) => Promise<Message<T['Response']>>
   }) {
     Object.assign(this, fields);
   }
@@ -148,7 +153,13 @@ export class MessageInstance<ResponseType extends typeof MessageDeclaration> {
 
 export type Message<T extends typeof MessageDeclaration> = UnionProxy<MessageInstance<T['Response']>, T['prototype']>;
 
+/**
+ * Message declaration base type.
+ * 
+ * Extend this type to add your own declaration
+ */
 export class MessageDeclaration {
+  @unenumerable()
   static __metadata: {
     name: string,
     repository: MessageRepository
@@ -188,6 +199,12 @@ export class MessageDeclaration {
     return JSON.stringify(marshaled);
   }
 
+  /**
+   * Deserializes a message from JSON
+   * 
+   * @param this The message declaration
+   * @param value The string to deserialize
+   */
   static Deserialize<
     T extends typeof MessageDeclaration
   >(this: T, value: string): Message<T> {
@@ -197,6 +214,12 @@ export class MessageDeclaration {
     return this.CreateMessage(unmarshalled);
   }
 
+  /**
+   * Marshals a message from a deserialized message to a MarshalledMessage
+   * 
+   * @param this The message declaration
+   * @param value The deserialized message to marshal
+   */
   static Marshal<
     T extends typeof MessageDeclaration
   >(this: T, value: T['prototype']): MarshalledMessage {
@@ -206,6 +229,12 @@ export class MessageDeclaration {
     };
   }
 
+  /**
+   * Unmarshals a message from a deserialized message to a message instance
+   * 
+   * @param this The message declaration
+   * @param value The marshalled message message to unmarshal
+   */
   static Unmarshal<
     T extends typeof MessageDeclaration
   >(this: T, value: MarshalledMessage): T['prototype'] {
