@@ -37,6 +37,8 @@ export class Handler<T extends typeof MessageDeclaration> {
   }
 }
 
+export type SendCallbackType = (destination: string, userdata: any, serializedMessage) => Promise<string>;
+
 /**
  * Message repository used to parse messages and dispatch events
  */
@@ -44,14 +46,14 @@ export class MessageRepository {
   private messages: { [key: string]: typeof MessageDeclaration } = {};
   private messageDecorator: <T extends typeof MessageDeclaration>(target: T) => void;
 
-  private sendCallback: (destination: string, serializedMessage: string) => Promise<string>;
+  private sendCallback: SendCallbackType;
 
   /**
    * Creates a new MessageRepository with the specified send and recieve callbacks
    * 
    * @param sendCallback Will be called when a message needs to be sent
    */
-  constructor(sendCallback?: (destination: string, serializedMessaage: string) => Promise<string>) {
+  constructor(sendCallback?: SendCallbackType) {
     this.sendCallback = sendCallback;
 
     this.messageDecorator = <T extends typeof MessageDeclaration>(target: T, name?: string) => {
@@ -69,14 +71,14 @@ export class MessageRepository {
     };
   }
 
-  SetSendCallback(callback: (destination: string, serializedMessage: string) => Promise<string>) {
+  SetSendCallback(callback: SendCallbackType) {
     this.sendCallback = callback;
   }
 
-  async SendPacket(destination: string, message: MessageInstance<any>): Promise<Message<any>> {
+  async SendPacket(destination: string, userdata: any, message: MessageInstance<any>): Promise<Message<any>> {
     // Dispatch the message with the client-defined send callback
     let serialized = message.Serialize();
-    let response = await this.sendCallback(destination, serialized);
+    let response = await this.sendCallback(destination, userdata, serialized);
 
     // Deserialize result
     let responseType = message.GetDeclaration().Response;
@@ -152,8 +154,8 @@ export class MessageInstance<ResponseType extends typeof MessageDeclaration> {
   /**
    * Sends this packet and optionally waits for a response
   */
-  async Send(destination: string): Promise<Message<ResponseType>> {
-    return this.messageType.__metadata.repository.SendPacket(destination, this) as Promise<Message<ResponseType>>;
+  async Send(destination?: string, userdata?: any): Promise<Message<ResponseType>> {
+    return this.messageType.__metadata.repository.SendPacket(destination, userdata, this) as Promise<Message<ResponseType>>;
   }
 }
 
