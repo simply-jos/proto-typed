@@ -1,4 +1,17 @@
 /**
+ * Decorator to indicate unenumerable field
+ */
+function unenumerable() {
+  return function (target: any, propertyKey: string | symbol) {
+    let descriptor = Object.getOwnPropertyDescriptor(target, propertyKey) || {};
+    descriptor.writable = true;
+    descriptor.enumerable = false;
+
+    Object.defineProperty(target, propertyKey, descriptor);
+  };
+}
+
+/**
  * Message marshalled and ready to be serialized
  */
 export interface MarshalledMessage {
@@ -9,11 +22,11 @@ export interface MarshalledMessage {
 
 export class Handler<T extends typeof MessageDeclaration> {
   public readonly type: T;
-  public readonly handler: (message: T['prototype']) => Promise<Message<T['Response']['prototype']>>;
+  public readonly handler: (message: T['prototype']) => Promise<Message<T['Response']>>;
 
   constructor(fields: {
     type: T,
-    handler: (message: T['prototype']) => Promise<Message<T['Response']['prototype']>>
+    handler: (message: T['prototype']) => Promise<Message<T['Response']>>
   }) {
     Object.assign(this, fields);
   }
@@ -26,12 +39,20 @@ export class MessageRepository {
   private messages: { [key: string]: typeof MessageDeclaration } = {};
   private messageDecorator: <T extends typeof MessageDeclaration>(target: T) => void;
 
-  constructor() {
+  private sendCallback: (destination: string, serializedMessage: string) => Promise<string>;
+
+  /**
+   * Creates a new MessageRepository with the specified send and recieve callbacks
+   * 
+   * @param sendCallback Will be called when a message needs to be sent
+   */
+  constructor(sendCallback: (destination: string, serializedMessaage: string) => Promise<string>) {
     this.messageDecorator = <T extends typeof MessageDeclaration>(target: T, name?: string) => {
       const messageName = name || target.name;
 
       target.__metadata = {
-        name: messageName
+        name: messageName,
+        repository: this
       };
 
       if (this.messages[messageName])
@@ -39,6 +60,18 @@ export class MessageRepository {
 
       this.messages[messageName] = target;
     };
+  }
+
+  async SendPacket(destination: string, message: MessageInstance<any>): Promise<Message<any>> {
+    // Dispatch the message with the client-defined send callback
+    let serialized = message.Serialize();
+    let response = await this.sendCallback(destination, serialized);
+
+    // Deserialize result
+    let responseType = message.GetDeclaration().Response;
+    let responseMessage = responseType.Deserialize(response);
+
+    return responseMessage;
   }
 
   DispatchToHandler(serializedMessage: string | MarshalledMessage, handlers: Handler<any>[]) {
@@ -88,23 +121,37 @@ export type UnionProxy<T, U> = {
   [K in keyof U]: U[K];
 }
 
-export class MessageInstance {
-  public readonly Serialize: () => string;
+export class MessageInstance<ResponseType extends typeof MessageDeclaration> {
+  @unenumerable()
+  private readonly messageType: typeof MessageDeclaration;
   
   constructor(type: typeof MessageDeclaration, fields: MessageDeclaration) {
-    this.Serialize = (): string => {
-      return type.Serialize(this);
-    };
-
+    this.messageType = type;
     Object.assign(this, fields);
+  }
+
+  public Serialize(): string {
+    return this.messageType.Serialize(this);
+  }
+
+  public GetDeclaration() {
+    return this.messageType;
+  }
+
+  /**
+   * Sends this packet and optionally waits for a response
+  */
+  async Send(destination: string): Promise<Message<ResponseType>> {
+    return this.messageType.__metadata.repository.SendPacket(destination, this) as Promise<Message<ResponseType>>;
   }
 }
 
-export type Message<T extends MessageDeclaration> = UnionProxy<MessageInstance, T>;
+export type Message<T extends typeof MessageDeclaration> = UnionProxy<MessageInstance<T['Response']>, T['prototype']>;
 
 export class MessageDeclaration {
   static __metadata: {
-    name: string
+    name: string,
+    repository: MessageRepository
   };
 
   static Response: typeof MessageDeclaration;
@@ -117,14 +164,14 @@ export class MessageDeclaration {
    */
   static CreateMessage<
     T extends typeof MessageDeclaration
-  >(this: T, fields: T['prototype']): Message<T['prototype']> {
+  >(this: T, fields: T['prototype']): Message<T> {
     // Create a new object of this declaration type
     let messageData = new this();
     Object.assign(messageData, fields)
 
     // Assign it to a new message instance
-    let messageInstance = new MessageInstance(this, fields);
-    return messageInstance as Message<T['prototype']>;
+    let messageInstance = new MessageInstance<T>(this, fields);
+    return (messageInstance as any) as Message<T>;
   }
 
   /**
@@ -143,7 +190,7 @@ export class MessageDeclaration {
 
   static Deserialize<
     T extends typeof MessageDeclaration
-  >(this: T, value: string): Message<T['prototype']> {
+  >(this: T, value: string): Message<T> {
     let marshalled = JSON.parse(value) as MarshalledMessage;
     let unmarshalled = this.Unmarshal(marshalled);
 
