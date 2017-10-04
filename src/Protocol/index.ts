@@ -51,7 +51,9 @@ export class MessageRepository {
    * 
    * @param sendCallback Will be called when a message needs to be sent
    */
-  constructor(sendCallback: (destination: string, serializedMessaage: string) => Promise<string>) {
+  constructor(sendCallback?: (destination: string, serializedMessaage: string) => Promise<string>) {
+    this.sendCallback = sendCallback;
+
     this.messageDecorator = <T extends typeof MessageDeclaration>(target: T, name?: string) => {
       const messageName = name || target.name;
 
@@ -65,6 +67,10 @@ export class MessageRepository {
 
       this.messages[messageName] = target;
     };
+  }
+
+  SetSendCallback(callback: (destination: string, serializedMessage: string) => Promise<string>) {
+    this.sendCallback = callback;
   }
 
   async SendPacket(destination: string, message: MessageInstance<any>): Promise<Message<any>> {
