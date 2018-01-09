@@ -27,11 +27,11 @@ export interface MarshalledMessage {
  */
 export class Handler<T extends typeof MessageDeclaration> {
   public readonly type: T;
-  public readonly handler: (message: Message<T>) => Promise<Message<T['Response']>>;
+  public readonly handler: (message: Message<T>, userdata?: any) => Promise<Message<T['ResponseType']>>;
 
   constructor(fields: {
     type: T,
-    handler: (message: Message<T>) => Promise<Message<T['Response']>>
+    handler: (message: Message<T>, userdata?: any) => Promise<Message<T['ResponseType']>>
   }) {
     Object.assign(this, fields);
   }
@@ -46,6 +46,9 @@ export class MessageRepository {
   private messages: { [key: string]: typeof MessageDeclaration } = {};
   private messageDecorator: <T extends typeof MessageDeclaration>(target: T) => void;
 
+  /**
+   * User-defined callback for sending a a packet.
+   */
   private sendCallback: SendCallbackType;
 
   /**
@@ -81,13 +84,13 @@ export class MessageRepository {
     let response = await this.sendCallback(destination, userdata, serialized);
 
     // Deserialize result
-    let responseType = message.GetDeclaration().Response;
+    let responseType = message.GetDeclaration().ResponseType;
     let responseMessage = responseType.Deserialize(response);
 
     return responseMessage;
   }
 
-  DispatchToHandler(serializedMessage: string | MarshalledMessage, handlers: Handler<any>[]) {
+  DispatchToHandler(serializedMessage: string | MarshalledMessage, userdata: any, handlers: Handler<any>[]) {
     // Deserialize packet
     if (typeof serializedMessage == 'string') {
       try {
@@ -117,7 +120,7 @@ export class MessageRepository {
     }
 
     // Dispatch messages
-    const response = handlers.find((v) => v.type == messageType).handler(message);
+    const response = handlers.find((v) => v.type == messageType).handler(message, userdata);
 
     // Take the response and pass it to the client
     return response;
@@ -159,7 +162,11 @@ export class MessageInstance<ResponseType extends typeof MessageDeclaration> {
   }
 }
 
-export type Message<T extends typeof MessageDeclaration> = UnionProxy<MessageInstance<T['Response']>, T['prototype']>;
+export type Message<T extends typeof MessageDeclaration> = UnionProxy<MessageInstance<T['ResponseType']>, T['prototype']>;
+
+export type Partial<T> = {
+  [P in keyof T]?: T[P];
+};
 
 /**
  * Message declaration base type.
@@ -173,7 +180,7 @@ export class MessageDeclaration {
     repository: MessageRepository
   };
 
-  static Response: typeof MessageDeclaration;
+  static ResponseType: typeof MessageDeclaration;
 
   /**
    * Creates a new message of this declared message type
@@ -184,6 +191,25 @@ export class MessageDeclaration {
   static CreateMessage<
     T extends typeof MessageDeclaration
   >(this: T, fields: T['prototype']): Message<T> {
+    // Create a new object of this declaration type
+    let messageData = new this();
+    Object.assign(messageData, fields)
+
+    // Assign it to a new message instance
+    let messageInstance = new MessageInstance<T>(this, fields);
+    return (messageInstance as any) as Message<T>;
+  }
+
+
+  /**
+   * Creates a new error
+   * 
+   * @param this Message declaration to create
+   * @param fields Fields to assign to the new message
+   */
+  static CreateError<
+    T extends typeof MessageDeclaration
+  >(this: T, fields: Partial<T['prototype']>): Message<T> {
     // Create a new object of this declaration type
     let messageData = new this();
     Object.assign(messageData, fields)
