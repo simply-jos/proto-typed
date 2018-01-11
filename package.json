@@ -1,7 +1,7 @@
 {
   "name": "proto-typed",
   "description": "Strongly typed, Typescript-driven newtworked protocols",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": "Joseph Delgado",
   "url": "http://rly.sexy/",
 
