@@ -13,7 +13,7 @@ A library for building strongly-typed communication protocols in TypeScript.
 
 ## Installing
 
-```npm install proto-typed```
+```npm install proto-typed --save```
 
 ## Example
 
