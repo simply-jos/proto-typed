@@ -2,7 +2,7 @@
 
 A library for building strongly-typed communication protocols in TypeScript.
 
-#### Features
+## Features
 
 - Compile time errors for protocol misuse
 - Runtime exceptions thrown for network errors, protocol misuse
@@ -11,9 +11,15 @@ A library for building strongly-typed communication protocols in TypeScript.
 - - Accidentally using an older version of your protocol will throw compile-time exceptions
 - Define your own transport via callbacks (not just HTTP)
 
-#### Example
+## Installing
 
-Common module (defines protocol, shared between client/server):
+```npm install proto-typed```
+
+## Example
+
+### Common module
+Defines protocol, shared between client/server:
+
 ```typescript
 import * as Prototyped from 'proto-typed'
 
@@ -43,7 +49,9 @@ export namespace Protocol {
 }
 ```
 
-Server:
+### Server
+Simple Express server:
+
 ```typescript
 import * as express from 'express'
 import * as Prototyped from 'proto-typed'
@@ -103,7 +111,9 @@ async function main() {
 main();
 ```
 
-Client:
+### Client:
+Bare-bones app to button to send a message and display a response:
+
 ```typescript
 import axios from 'axios'
 import * as Prototyped from 'proto-typed'
