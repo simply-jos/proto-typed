@@ -241,8 +241,12 @@ export class MessageDeclaration {
    */
   static Deserialize<
     T extends typeof MessageDeclaration
-  >(this: T, value: string): Message<T> {
-    let marshalled = JSON.parse(value) as MarshalledMessage;
+  >(this: T, value: string | object): Message<T> {
+    if (typeof value == 'string')
+      var marshalled = JSON.parse(value) as MarshalledMessage;
+    else
+      var marshalled = value as MarshalledMessage;
+
     let unmarshalled = this.Unmarshal(marshalled);
 
     return this.CreateMessage(unmarshalled);
