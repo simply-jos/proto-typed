@@ -44,7 +44,7 @@ export type SendCallbackType = (destination: string, userdata: any, serializedMe
  */
 export class MessageRepository {
   private messages: { [key: string]: typeof MessageDeclaration } = {};
-  private messageDecorator: <T extends typeof MessageDeclaration>(target: T) => void;
+  private messageDecorator: <T extends typeof MessageDeclaration>(name?: string) => ((target: T) => void);
 
   /**
    * User-defined callback for sending a a packet.
@@ -59,18 +59,20 @@ export class MessageRepository {
   constructor(sendCallback?: SendCallbackType) {
     this.sendCallback = sendCallback;
 
-    this.messageDecorator = <T extends typeof MessageDeclaration>(target: T, name?: string) => {
-      const messageName = name || target.name;
+    this.messageDecorator = <T extends typeof MessageDeclaration>(name?: string) => {
+      return (target: T) => {
+        const messageName = name || target.name;
 
-      target.__metadata = {
-        name: messageName,
-        repository: this
+        target.__metadata = {
+          name: messageName,
+          repository: this
+        };
+
+        if (this.messages[messageName])
+          throw `Message declaration ${messageName} was already registered`
+
+        this.messages[messageName] = target;
       };
-
-      if (this.messages[messageName])
-        throw `Message declaration ${messageName} was already registered`
-
-      this.messages[messageName] = target;
     };
   }
 
